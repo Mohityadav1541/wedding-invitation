@@ -133,11 +133,4 @@ The backend is fully self-contained using atomic file-backed JSON/SQLite storage
 
 ---
 
-## 📋 Default Seed Credentials (for Testing)
 
-| Role | Route | PIN | Notes |
-|---|---|---|---|
-| **Photographer Master** | `/photographer` | `88889999` | Configurable via `PHOTOGRAPHER_PIN` |
-| **Wedding A (Rahul & Priya)** | `/wedding-admin` | `12345678` | Public URL: `/w/rahul-weds-priya` |
-| **Wedding B (Amit & Neha)** | `/wedding-admin` | `87654321` | Public URL: `/w/amit-weds-neha` |
-| **Wedding C (Rohan & Kavya)** | `/wedding-admin` | `99887766` | Draft preview: `/w/rohan-weds-kavya` |
