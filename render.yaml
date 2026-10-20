@@ -11,6 +11,6 @@ services:
       - key: PORT
         value: 10000
       - key: PHOTOGRAPHER_PIN
-        value: 88889999
+        sync: false
       - key: SESSION_SECRET
         generateValue: true

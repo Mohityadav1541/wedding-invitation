@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "dev:client": "vite",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "test": "node tests/test_unit.js && node tests/test_integration.js && node tests/test_system.js && node tests/test_security_suite.js"
   },
   "dependencies": {
     "@react-three/drei": "^10.5.1",

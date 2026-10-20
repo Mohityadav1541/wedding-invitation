@@ -87,49 +87,25 @@ npm run dev
 
 ## 🧪 Automated Verification Suite
 
-Run the 16 mandatory security and functional tests:
+Run all automated unit, integration, system, and security test suites:
 ```bash
-node test_security_suite.js
+npm test
 ```
-
-### Verified Test Cases:
-1. `PASS` Valid photographer PIN opens photographer portal
-2. `PASS` Invalid photographer PIN is rejected (HTTP 401)
-3. `PASS` Valid Wedding A PIN opens only Wedding A
-4. `PASS` Valid Wedding B PIN opens only Wedding B
-5. `PASS` Wedding A PIN cannot access Wedding B's private API or records
-6. `PASS` Administrator cannot obtain access by changing wedding ID in request
-7. `PASS` Unauthenticated users cannot retrieve guest records
-8. `PASS` Repeated wrong PIN attempts trigger rate limiting or temporary lockout (HTTP 429)
-9. `PASS` PINs are never exposed in frontend bundles or ordinary database reads
-10. `PASS` Logout invalidates access to protected dashboard endpoints
-11. `PASS` Resetting a wedding PIN invalidates previous credentials and sessions as designed
-12. `PASS` A newly submitted RSVP appears in the correct dashboard
-13. `PASS` Guest counts update correctly (sum of confirmed attendees)
-14. `PASS` Duplicate submissions do not silently inflate totals (updates existing phone record)
-15. `PASS` Published invitation routes work; draft is protected from public (HTTP 404)
-16. `PASS` Existing 3D experience, audio player, lyrics, countdown, and ceremony models continue working
 
 ---
 
-## ☁️ Zero-Cost Production Deployment
+## ☁️ Production Deployment on Render
 
-The backend is fully self-contained using atomic file-backed JSON/SQLite storage (`server/data/store.json`), requiring **zero paid services, zero credit cards, and zero external database setup**.
-
-### Option A: Render.com (Free Web Service)
-1. Push code to GitHub.
-2. In Render Dashboard, click **New > Web Service**.
-3. Settings:
-   - **Environment:** Node
-   - **Build Command:** `npm run build`
-   - **Start Command:** `npm run start`
-4. Add Environment Variable:
-   - `PHOTOGRAPHER_PIN`: `<your-secret-master-pin>`
+1. Push code to your GitHub repository.
+2. In the [Render Dashboard](https://dashboard.render.com), click **New > Web Service** and select this repository.
+3. Configuration:
+   - **Root Directory:** Leave empty / blank
+   - **Environment:** `Node`
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `node server/index.js`
+4. Environment Variables:
+   - `PHOTOGRAPHER_PIN`: `<your-secret-pin>` (e.g. `88889999`)
    - `NODE_ENV`: `production`
-
-### Option B: Railway / Fly.io / VPS
-1. Run `npm run build` followed by `npm start`.
-2. The Express server serves both the API endpoints (`/api/*`) and the compiled Vite static assets from `dist/`.
 
 ---
 

@@ -46,3 +46,12 @@ build/
 .idea/
 *.swp
 *.swo
+
+# Local Automated Test Suites (Keeps test PINs & endpoints secure)
+tests/
+test_*.js
+
+# Temporary Files
+*.tmp
+*.tmp.*
+
