@@ -14,7 +14,11 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
-const PORT = process.env.PORT || 5001
+const PORT = Number(process.env.PORT) || 5001
+const HOST = '0.0.0.0'
+
+// Enable trust proxy for Render / Cloudflare / reverse proxy
+app.set('trust proxy', 1)
 
 // Middleware
 app.use(cors({
@@ -56,8 +60,8 @@ app.get(/^(?!\/api).*/, (req, res) => {
   })
 })
 
-const server = app.listen(PORT, () => {
-  console.log(`[API Server] Running on http://localhost:${PORT}`)
+const server = app.listen(PORT, HOST, () => {
+  console.log(`[API Server] Running on http://${HOST}:${PORT}`)
   console.log(`[API Server] Photographer Default PIN: ${process.env.PHOTOGRAPHER_PIN || '88889999'}`)
 })
 
