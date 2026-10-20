@@ -3,8 +3,6 @@ services:
     name: rajasthani-wedding-invitation
     env: node
     plan: free
-    region: singapore
-    rootDir: rajasthani-wedding-invitation
     buildCommand: npm install && npm run build
     startCommand: node server/index.js
     envVars:
