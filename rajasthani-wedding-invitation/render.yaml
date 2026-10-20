@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: rajasthani-wedding-invitation
+    env: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: node server/index.js
+    disk:
+      name: wedding-database-disk
+      mountPath: /opt/render/project/src/server/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: PHOTOGRAPHER_PIN
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
