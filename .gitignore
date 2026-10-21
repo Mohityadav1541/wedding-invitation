@@ -55,3 +55,8 @@ test_*.js
 *.tmp
 *.tmp.*
 
+# Local Agent Workspace & Skills Lock
+.agents/
+skills-lock.json
+
+
