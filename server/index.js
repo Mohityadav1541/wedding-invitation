@@ -8,7 +8,7 @@ import authRoutes from './routes/authRoutes.js'
 import photographerRoutes from './routes/photographerRoutes.js'
 import weddingAdminRoutes from './routes/weddingAdminRoutes.js'
 import publicRoutes from './routes/publicRoutes.js'
-import { getDb } from './db.js'
+import { getDb, initDb } from './db.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -17,7 +17,7 @@ const app = express()
 const PORT = Number(process.env.PORT) || 5001
 const HOST = '0.0.0.0'
 
-// Enable trust proxy for Render / Cloudflare / reverse proxy
+// Enable trust proxy for Render / Railway / Cloudflare / reverse proxy
 app.set('trust proxy', 1)
 
 // Middleware
@@ -29,8 +29,8 @@ app.use(cookieParser())
 app.use(express.json({ limit: '25mb' }))
 app.use(express.urlencoded({ extended: true, limit: '25mb' }))
 
-// Initialize database on startup
-getDb()
+// Initialize database on startup (Neon PostgreSQL if DATABASE_URL is set, otherwise local JSON store)
+await initDb()
 
 // API Routes
 app.use('/api/auth', authRoutes)
@@ -43,6 +43,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     system: 'Royal Rajasthani Multi-Wedding Platform',
+    database: process.env.DATABASE_URL ? 'neon-postgresql' : 'local-json',
     timestamp: new Date().toISOString(),
   })
 })

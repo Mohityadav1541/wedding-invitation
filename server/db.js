@@ -1,7 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import pg from 'pg'
 import { hashPin, generateId } from './crypto.js'
+
+const { Pool } = pg
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -14,6 +17,79 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 let cache = null
+let pgPool = null
+let isPersisting = false
+let hasPendingPersist = false
+
+export function getPool() {
+  if (pgPool) return pgPool
+  const connStr = process.env.DATABASE_URL
+  if (!connStr) return null
+
+  try {
+    const isLocal = connStr.includes('localhost') || connStr.includes('127.0.0.1')
+    pgPool = new Pool({
+      connectionString: connStr,
+      ssl: isLocal ? false : { rejectUnauthorized: false },
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+    })
+    pgPool.on('error', (err) => {
+      console.error('[Neon PostgreSQL Pool Error]:', err.message)
+    })
+    return pgPool
+  } catch (err) {
+    console.error('[Neon PostgreSQL Init Error]:', err.message)
+    return null
+  }
+}
+
+export async function initDb() {
+  const pool = getPool()
+  if (pool) {
+    try {
+      // 1. Ensure table exists
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS wedding_platform_data (
+          id VARCHAR(50) PRIMARY KEY,
+          data JSONB NOT NULL,
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `)
+
+      // 2. Load existing data from Neon
+      const res = await pool.query(
+        `SELECT data FROM wedding_platform_data WHERE id = 'main_store' LIMIT 1;`
+      )
+      if (res.rows.length > 0 && res.rows[0].data) {
+        cache = res.rows[0].data
+        console.log('✅ [Neon PostgreSQL] Successfully connected & loaded data from Neon database.')
+        try {
+          fs.writeFileSync(DB_FILE, JSON.stringify(cache, null, 2), 'utf8')
+        } catch (_) {}
+        return cache
+      }
+
+      // 3. First time run on Neon: initialize fresh data
+      console.log('⚡ [Neon PostgreSQL] Initializing fresh store in Neon database...')
+      loadDb()
+      await pool.query(
+        `INSERT INTO wedding_platform_data (id, data, updated_at)
+         VALUES ('main_store', $1, NOW())
+         ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = NOW();`,
+        [JSON.stringify(cache)]
+      )
+      console.log('✅ [Neon PostgreSQL] Initial data successfully stored in Neon database.')
+      return cache
+    } catch (err) {
+      console.error('⚠️ [Neon PostgreSQL Connection Warning]:', err.message)
+      console.log('Falling back to local file storage (store.json)...')
+    }
+  }
+
+  return loadDb()
+}
 
 function loadDb() {
   if (cache) return cache
@@ -55,10 +131,56 @@ export function getDb() {
 
 export function saveDb() {
   if (!cache) return
-  const tempFile = `${DB_FILE}.tmp.${Date.now()}`
-  fs.writeFileSync(tempFile, JSON.stringify(cache, null, 2), 'utf8')
-  fs.renameSync(tempFile, DB_FILE)
+
+  // 1. Write to local file backup
+  try {
+    const tempFile = `${DB_FILE}.tmp.${Date.now()}`
+    fs.writeFileSync(tempFile, JSON.stringify(cache, null, 2), 'utf8')
+    fs.renameSync(tempFile, DB_FILE)
+  } catch (_) {
+    // Ignore file write errors on read-only/ephemeral filesystems
+  }
+
+  // 2. Asynchronously persist to Neon PostgreSQL
+  persistToNeon()
 }
+
+async function persistToNeon() {
+  const pool = getPool()
+  if (!pool || !cache) return
+
+  if (isPersisting) {
+    hasPendingPersist = true
+    return
+  }
+
+  isPersisting = true
+  try {
+    const payload = JSON.stringify(cache)
+    await pool.query(
+      `INSERT INTO wedding_platform_data (id, data, updated_at)
+       VALUES ('main_store', $1, NOW())
+       ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = NOW();`,
+      [payload]
+    )
+  } catch (err) {
+    console.error('[Neon PostgreSQL Save Error]:', err.message)
+  } finally {
+    isPersisting = false
+    if (hasPendingPersist) {
+      hasPendingPersist = false
+      persistToNeon()
+    }
+  }
+}
+
+export async function closeDb() {
+  if (pgPool) {
+    await pgPool.end()
+    pgPool = null
+  }
+}
+
 
 function seedInitialData(db) {
   const defaultEvents = [
