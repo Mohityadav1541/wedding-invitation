@@ -22,7 +22,10 @@ export function verifyPhotographerPin(pin) {
 /**
  * Session creation
  */
-export function createSession(type, weddingId = null, durationMs = 365 * 24 * 60 * 60 * 1000) {
+const DEFAULT_EXPIRY_DAYS = Number(process.env.SESSION_EXPIRY_DAYS) || 7
+const DEFAULT_DURATION_MS = DEFAULT_EXPIRY_DAYS * 24 * 60 * 60 * 1000
+
+export function createSession(type, weddingId = null, durationMs = DEFAULT_DURATION_MS) {
   const db = getDb()
   const token = generateSessionToken()
   const now = new Date()

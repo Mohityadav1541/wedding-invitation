@@ -19,12 +19,15 @@ function getClientIp(req) {
   return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown'
 }
 
+const DEFAULT_EXPIRY_DAYS = Number(process.env.SESSION_EXPIRY_DAYS) || 7
+const DEFAULT_COOKIE_MAX_AGE_MS = DEFAULT_EXPIRY_DAYS * 24 * 60 * 60 * 1000
+
 function setSessionCookie(res, token) {
   res.cookie('wedding_platform_session', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 365 * 24 * 60 * 60 * 1000,
+    maxAge: DEFAULT_COOKIE_MAX_AGE_MS,
   })
 }
 
