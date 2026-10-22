@@ -61,9 +61,11 @@ app.get(/^(?!\/api).*/, (req, res) => {
   })
 })
 
-const server = app.listen(PORT, HOST, () => {
-  console.log(`[API Server] Running on http://${HOST}:${PORT}`)
-  console.log(`[API Server] Photographer Default PIN: ${process.env.PHOTOGRAPHER_PIN || '88889999'}`)
-})
+if (!process.env.VERCEL) {
+  const server = app.listen(PORT, HOST, () => {
+    console.log(`[API Server] Running on http://${HOST}:${PORT}`)
+    console.log(`[API Server] Photographer Default PIN: ${process.env.PHOTOGRAPHER_PIN || '88889999'}`)
+  })
+}
 
 export default app
