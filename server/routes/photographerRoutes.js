@@ -23,7 +23,7 @@ function slugify(text) {
  * GET /api/photographer/weddings
  * List all wedding projects with RSVP metrics
  */
-router.get('/weddings', (req, res) => {
+router.get('/weddings', async (req, res) => {
   const db = getDb()
   const activeWeddings = db.weddings.filter((w) => !w.archived)
   let dbChanged = false
@@ -86,7 +86,7 @@ router.get('/weddings', (req, res) => {
   })
 
   if (dbChanged) {
-    saveDb()
+    await saveDb()
   }
 
   res.json({ weddings: list })
@@ -131,7 +131,7 @@ router.get('/stats', (req, res) => {
  * POST /api/photographer/weddings
  * Create a new wedding project and generate a secure 8-digit admin PIN
  */
-router.post('/weddings', (req, res) => {
+router.post('/weddings', async (req, res) => {
   const {
     brideName = '',
     groomName = '',
@@ -253,7 +253,7 @@ router.post('/weddings', (req, res) => {
     updatedAt: now,
   })
 
-  saveDb()
+  await saveDb()
   recordAuditLog('create_wedding', { weddingId, slug: finalSlug })
 
   res.status(201).json({
@@ -301,7 +301,7 @@ router.get('/weddings/:id', (req, res) => {
 /**
  * PUT /api/photographer/weddings/:id
  */
-router.put('/weddings/:id', (req, res) => {
+router.put('/weddings/:id', async (req, res) => {
   const db = getDb()
   const wedding = db.weddings.find((w) => w.id === req.params.id && !w.archived)
   if (!wedding) {
@@ -340,7 +340,7 @@ router.put('/weddings/:id', (req, res) => {
   }
 
   wedding.updatedAt = new Date().toISOString()
-  saveDb()
+  await saveDb()
   recordAuditLog('update_wedding', { weddingId: wedding.id })
 
   res.json({ success: true, wedding, message: 'विवाह विवरण सफलतापूर्वक अपडेट हुए।' })
@@ -349,7 +349,7 @@ router.put('/weddings/:id', (req, res) => {
 /**
  * PATCH /api/photographer/weddings/:id/publish
  */
-router.patch('/weddings/:id/publish', (req, res) => {
+router.patch('/weddings/:id/publish', async (req, res) => {
   const db = getDb()
   const wedding = db.weddings.find((w) => w.id === req.params.id && !w.archived)
   if (!wedding) {
@@ -358,7 +358,7 @@ router.patch('/weddings/:id/publish', (req, res) => {
 
   wedding.published = !wedding.published
   wedding.updatedAt = new Date().toISOString()
-  saveDb()
+  await saveDb()
   recordAuditLog('toggle_publish', { weddingId: wedding.id, published: wedding.published })
 
   res.json({
@@ -372,7 +372,7 @@ router.patch('/weddings/:id/publish', (req, res) => {
  * POST /api/photographer/weddings/:id/reset-pin
  * Sets a custom PIN or generates a new 8-digit PIN without disrupting existing family sessions
  */
-router.post('/weddings/:id/reset-pin', (req, res) => {
+router.post('/weddings/:id/reset-pin', async (req, res) => {
   const db = getDb()
   const wedding = db.weddings.find((w) => w.id === req.params.id && !w.archived)
   if (!wedding) {
@@ -404,7 +404,7 @@ router.post('/weddings/:id/reset-pin', (req, res) => {
     updatedAt: now,
   })
 
-  saveDb()
+  await saveDb()
   recordAuditLog('reset_admin_pin', { weddingId: wedding.id })
 
   res.json({
@@ -417,7 +417,7 @@ router.post('/weddings/:id/reset-pin', (req, res) => {
 /**
  * DELETE /api/photographer/weddings/:id
  */
-router.delete('/weddings/:id', (req, res) => {
+router.delete('/weddings/:id', async (req, res) => {
   const db = getDb()
   const wedding = db.weddings.find((w) => w.id === req.params.id && !w.archived)
   if (!wedding) {
@@ -436,7 +436,7 @@ router.delete('/weddings/:id', (req, res) => {
   }
   revokeWeddingSessions(wedding.id)
 
-  saveDb()
+  await saveDb()
   recordAuditLog('archive_wedding', { weddingId: wedding.id })
 
   res.json({ success: true, message: 'विवाह प्रोजेक्ट सफलतापूर्वक हटा/आर्काइव कर दिया गया।' })

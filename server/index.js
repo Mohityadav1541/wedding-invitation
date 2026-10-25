@@ -8,7 +8,7 @@ import authRoutes from './routes/authRoutes.js'
 import photographerRoutes from './routes/photographerRoutes.js'
 import weddingAdminRoutes from './routes/weddingAdminRoutes.js'
 import publicRoutes from './routes/publicRoutes.js'
-import { getDb, initDb } from './db.js'
+import { getDb, initDb, ensureDbFresh } from './db.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -31,6 +31,18 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }))
 
 // Initialize database on startup (Neon PostgreSQL if DATABASE_URL is set, otherwise local JSON store)
 await initDb()
+
+// Middleware to ensure fresh database state on every API call (critical for Vercel serverless multi-instance sync)
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/api') && req.path !== '/api/health') {
+    try {
+      await ensureDbFresh()
+    } catch (err) {
+      console.error('[DB Sync Middleware Error]:', err.message)
+    }
+  }
+  next()
+})
 
 // API Routes
 app.use('/api/auth', authRoutes)

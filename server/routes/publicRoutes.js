@@ -72,7 +72,7 @@ function sanitizePublicWedding(w, isPreview = false) {
  * POST /api/public/weddings/:slug/rsvp
  * Public RSVP submission. Server-validated, scoped to wedding, rate-limited and duplicate-safe.
  */
-router.post('/weddings/:slug/rsvp', (req, res) => {
+router.post('/weddings/:slug/rsvp', async (req, res) => {
   const { slug } = req.params
   const db = getDb()
   const wedding = db.weddings.find((w) => w.slug === slug && !w.archived)
@@ -138,7 +138,7 @@ router.post('/weddings/:slug/rsvp', (req, res) => {
     })
   }
 
-  saveDb()
+  await saveDb()
 
   res.status(201).json({
     success: true,

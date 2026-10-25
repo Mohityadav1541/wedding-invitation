@@ -129,32 +129,56 @@ export function getDb() {
   return loadDb()
 }
 
-export function saveDb() {
+/**
+ * Ensure in-memory cache matches the latest data in Neon PostgreSQL.
+ * Critical for serverless environments (e.g. Vercel) where multiple lambdas run concurrently.
+ */
+export async function ensureDbFresh() {
+  const pool = getPool()
+  if (!pool) return loadDb()
+
+  try {
+    const res = await pool.query(
+      `SELECT data FROM wedding_platform_data WHERE id = 'main_store' LIMIT 1;`
+    )
+    if (res.rows.length > 0 && res.rows[0].data) {
+      cache = res.rows[0].data
+    } else if (!cache) {
+      await initDb()
+    }
+  } catch (err) {
+    console.error('[Neon Refresh Warning]:', err.message)
+    if (!cache) loadDb()
+  }
+  return cache || loadDb()
+}
+
+/**
+ * Save database state.
+ * Writes immediately to local file backup and awaits write confirmation from Neon PostgreSQL.
+ */
+export async function saveDb() {
   if (!cache) return
 
-  // 1. Write to local file backup
+  // 1. Write to local file backup (safely ignore in read-only serverless filesystems)
   try {
     const tempFile = `${DB_FILE}.tmp.${Date.now()}`
     fs.writeFileSync(tempFile, JSON.stringify(cache, null, 2), 'utf8')
     fs.renameSync(tempFile, DB_FILE)
-  } catch (_) {
-    // Ignore file write errors on read-only/ephemeral filesystems
-  }
+  } catch (_) {}
 
-  // 2. Asynchronously persist to Neon PostgreSQL
-  persistToNeon()
+  // 2. Persist to Neon PostgreSQL and await completion
+  try {
+    await persistToNeon()
+  } catch (err) {
+    console.error('[Neon PostgreSQL Save Warning]:', err.message)
+  }
 }
 
-async function persistToNeon() {
+export async function persistToNeon() {
   const pool = getPool()
   if (!pool || !cache) return
 
-  if (isPersisting) {
-    hasPendingPersist = true
-    return
-  }
-
-  isPersisting = true
   try {
     const payload = JSON.stringify(cache)
     await pool.query(
@@ -165,12 +189,7 @@ async function persistToNeon() {
     )
   } catch (err) {
     console.error('[Neon PostgreSQL Save Error]:', err.message)
-  } finally {
-    isPersisting = false
-    if (hasPendingPersist) {
-      hasPendingPersist = false
-      persistToNeon()
-    }
+    throw err
   }
 }
 

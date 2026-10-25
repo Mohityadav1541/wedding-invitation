@@ -10,7 +10,7 @@ import {
   extractToken,
   recordAuditLog,
 } from '../auth.js'
-import { getDb } from '../db.js'
+import { getDb, saveDb } from '../db.js'
 import { verifyPin } from '../crypto.js'
 
 const router = express.Router()
@@ -34,7 +34,7 @@ function setSessionCookie(res, token) {
 /**
  * POST /api/auth/photographer-login
  */
-router.post('/photographer-login', (req, res) => {
+router.post('/photographer-login', async (req, res) => {
   const ip = getClientIp(req)
   const rateCheck = checkRateLimit(`photo_${ip}`, 5, 15 * 60 * 1000)
   if (rateCheck.locked) {
@@ -57,6 +57,7 @@ router.post('/photographer-login', (req, res) => {
   const session = createSession('photographer', null)
   setSessionCookie(res, session.token)
   recordAuditLog('photographer_login', { ip })
+  await saveDb()
 
   res.json({
     success: true,
@@ -70,7 +71,7 @@ router.post('/photographer-login', (req, res) => {
  * POST /api/auth/wedding-admin-login
  * Shared endpoint for all weddings. Identifies wedding strictly by PIN on the server.
  */
-router.post('/wedding-admin-login', (req, res) => {
+router.post('/wedding-admin-login', async (req, res) => {
   const ip = getClientIp(req)
   const rateCheck = checkRateLimit(`wadmin_${ip}`, 5, 15 * 60 * 1000)
   if (rateCheck.locked) {
@@ -109,6 +110,7 @@ router.post('/wedding-admin-login', (req, res) => {
   const session = createSession('wedding_admin', matchedWedding.id)
   setSessionCookie(res, session.token)
   recordAuditLog('wedding_admin_login', { weddingId: matchedWedding.id, ip })
+  await saveDb()
 
   res.json({
     success: true,
@@ -125,10 +127,11 @@ router.post('/wedding-admin-login', (req, res) => {
 /**
  * POST /api/auth/logout
  */
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
   const token = extractToken(req)
   if (token) {
     revokeSession(token)
+    await saveDb()
   }
   res.clearCookie('wedding_platform_session')
   res.json({ success: true, message: 'सत्र समाप्त कर दिया गया।' })

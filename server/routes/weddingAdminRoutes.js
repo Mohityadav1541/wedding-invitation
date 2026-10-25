@@ -72,7 +72,7 @@ router.get('/dashboard', (req, res) => {
  * PUT /api/wedding-admin/settings
  * Allows the family to update couple photos, venue, and custom details
  */
-router.put('/settings', (req, res) => {
+router.put('/settings', async (req, res) => {
   const db = getDb()
   const wedding = db.weddings.find((w) => w.id === req.weddingId && !w.archived)
   if (!wedding) {
@@ -96,7 +96,7 @@ router.put('/settings', (req, res) => {
   }
 
   wedding.updatedAt = new Date().toISOString()
-  saveDb()
+  await saveDb()
   recordAuditLog('family_update_settings', { weddingId: req.weddingId })
 
   res.json({
