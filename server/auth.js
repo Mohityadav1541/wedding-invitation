@@ -3,7 +3,7 @@ import { generateSessionToken, hashPin, verifyPin } from './crypto.js'
 
 // Default photographer PIN if not supplied in environment.
 // In production, configure PHOTOGRAPHER_PIN in server environment variables.
-const PHOTOGRAPHER_DEFAULT_PIN = process.env.PHOTOGRAPHER_PIN || '88889999'
+const PHOTOGRAPHER_DEFAULT_PIN = process.env.PHOTOGRAPHER_PIN || '15407610'
 
 // Cache photographer hash dynamically
 let photographerHashCache = null

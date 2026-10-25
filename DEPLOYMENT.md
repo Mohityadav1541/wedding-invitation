@@ -23,7 +23,7 @@ This setup pairs a cloud-hosted **Neon PostgreSQL** database with an automatical
 4. Click **Add Variables** (or go to **Settings > Variables**) and set:
    - `DATABASE_URL`: Your full Neon PostgreSQL connection string from Step 1.
    - `NODE_ENV`: `production`
-   - `PHOTOGRAPHER_PIN`: `YOUR_SECRET_MASTER_PIN` (e.g. `88889999`)
+   - `PHOTOGRAPHER_PIN`: `YOUR_SECRET_MASTER_PIN` (e.g. `15407610`)
    - `SESSION_EXPIRY_DAYS`: `7`
 5. Railway will automatically detect [railway.json](file:///Users/mohit/Desktop/coding/wedding%20invitation/railway.json), run `npm install && npm run build`, and launch the web server.
 6. Under **Settings > Networking**, click **Generate Domain** (e.g. `wedding-invitation-production.up.railway.app`) or attach a custom domain.

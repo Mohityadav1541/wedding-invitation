@@ -639,7 +639,7 @@ export default function PhotographerPortal() {
                 type="password"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
-                placeholder="फोटोग्राफर PIN दर्ज करें (डिफ़ॉल्ट: 88889999)"
+                placeholder="फोटोग्राफर PIN दर्ज करें"
                 autoComplete="current-password"
                 required
               />
@@ -659,7 +659,7 @@ export default function PhotographerPortal() {
           <div style={{ marginTop: 24, padding: 14, background: '#fdf6ed', borderRadius: 8, border: '1px solid #ebd7af', fontSize: 12, color: '#7a4e1d' }}>
             <strong>प्रशासनिक सहायता:</strong>
             <p style={{ margin: '4px 0 0' }}>
-              डिफ़ॉल्ट फोटोग्राफर पिन <code>88889999</code> है। प्रोडक्शन सर्वर पर इसे <code>PHOTOGRAPHER_PIN</code> एनवायरनमेंट वेरिएबल से बदला जा सकता है।
+              फोटोग्राफर मास्टर पिन एनवायरनमेंट वेरिएबल <code>PHOTOGRAPHER_PIN</code> से नियंत्रित होता है।
             </p>
           </div>
         </div>

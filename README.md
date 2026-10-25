@@ -8,7 +8,7 @@ A production-grade, multi-wedding photographer platform built with **React 19**,
 ## 🏛️ Three Primary Entry Points
 
 1. **Photographer Portal:** `/photographer`
-   - Single secure photographer account with master PIN authentication (`PHOTOGRAPHER_PIN`, default `88889999`).
+   - Single secure photographer account with master PIN authentication (`PHOTOGRAPHER_PIN`, default `15407610`).
    - Project dashboard managing all weddings (e.g., *Rahul & Priya*, *Amit & Neha*, *Rohan & Kavya*).
    - Create new weddings with automatic slug and 8-digit high-entropy PIN generation.
    - Publish / Unpublish toggles and preview before release.
@@ -73,7 +73,7 @@ Copy the example environment file:
 ```bash
 cp .env.example .env
 ```
-*(Default Photographer PIN: `88889999`)*
+*(Default Photographer PIN: `15407610`)*
 
 ### 3. Run Locally (Full-Stack)
 ```bash
@@ -104,7 +104,7 @@ npm test
    - **Build Command:** `npm install && npm run build`
    - **Start Command:** `node server/index.js`
 4. Environment Variables:
-   - `PHOTOGRAPHER_PIN`: `<your-secret-pin>` (e.g. `88889999`)
+   - `PHOTOGRAPHER_PIN`: `<your-secret-pin>` (e.g. `15407610`)
    - `NODE_ENV`: `production`
 
 ---
