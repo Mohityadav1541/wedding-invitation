@@ -1076,8 +1076,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .photo-pin-warning { font-size: 12px; color: #8c2d19; margin: 0; line-height: 1.5; }
 
 /* ── Modal Tabs & Overlays ── */
-.admin-modal-overlay { position: fixed; inset: 0; background: rgba(20,5,10,0.65); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-.admin-modal-box { background: #fff; border-radius: 16px; border: 1px solid #ebd7af; width: 100%; max-width: 640px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); animation: popIn .2s ease-out; }
+.admin-modal-overlay { position: fixed; inset: 0; background: rgba(20,5,10,0.65); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; overflow-y: auto; }
+.admin-modal-box { background: #fff; border-radius: 16px; border: 1px solid #ebd7af; width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); animation: popIn .2s ease-out; }
 @keyframes popIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
 .admin-modal-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 20px 24px; border-bottom: 1px solid #ebd7af; background: #fdf8ef; border-radius: 16px 16px 0 0; }
 .admin-modal-head h2 { font-family: 'Cinzel', serif; font-size: 20px; color: #2a0d15; margin: 0 0 4px; }
