@@ -27,17 +27,8 @@ import RajPortrait from '../components/RajPortrait.jsx'
 import MobileWeddingVideoPlayer from '../components/MobileWeddingVideoPlayer.jsx'
 import { fetchPublicWedding, submitRsvp } from '../lib/api.js'
 import { getGoogleMapsDestinationUrl } from '../lib/weddingVenueOptions.js'
+import { formatCountdown } from '../lib/weddingEventOptions.js'
 
-function formatCountdown(targetDate) {
-  if (!targetDate) return null
-  const diff = new Date(targetDate).getTime() - Date.now()
-  if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true }
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-  return { days, hours, minutes, seconds, isPast: false }
-}
 
 function Ornament({ className = '' }) {
   return (

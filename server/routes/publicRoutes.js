@@ -35,6 +35,18 @@ router.get('/weddings/:slug', (req, res) => {
   })
 })
 
+export function normalizeWeddingDate(dateStr) {
+  if (!dateStr) return ''
+  let raw = String(dateStr).trim()
+  if (!raw) return ''
+  if (/^\d{4}-\d{2}-\d{2}:/.test(raw)) {
+    raw = raw.replace(/^(\d{4}-\d{2}-\d{2}):/, '$1T18:30:')
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    raw = `${raw}T18:30:00+05:30`
+  }
+  return raw
+}
+
 function sanitizePublicWedding(w, isPreview = false) {
   return {
     id: w.id,
@@ -52,7 +64,7 @@ function sanitizePublicWedding(w, isPreview = false) {
     ganeshPhotoFocal: w.ganeshPhotoFocal || '50% 25%',
     familyLine: w.familyLine,
     blessing: w.blessing,
-    weddingDate: w.weddingDate,
+    weddingDate: normalizeWeddingDate(w.weddingDate),
     weddingDateLabel: w.weddingDateLabel,
     weddingTimeLabel: w.weddingTimeLabel,
     venue: w.venue || {},

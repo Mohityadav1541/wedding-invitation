@@ -2,6 +2,7 @@ import express from 'express'
 import { requirePhotographer, recordAuditLog, revokeWeddingSessions } from '../auth.js'
 import { getDb, saveDb } from '../db.js'
 import { generateId, generateSecurePin, hashPin } from '../crypto.js'
+import { normalizeWeddingDate } from './publicRoutes.js'
 
 const router = express.Router()
 
@@ -178,7 +179,7 @@ router.post('/weddings', async (req, res) => {
     ganeshGardenPhoto: '',
     familyLine: `${brideName.trim()} एवं ${groomName.trim()} परिवार का स्नेह आमंत्रण`,
     blessing: 'वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ।\nनिर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥',
-    weddingDate,
+    weddingDate: normalizeWeddingDate(weddingDate),
     weddingDateLabel,
     weddingTimeLabel,
     venue: {
@@ -335,7 +336,7 @@ router.put('/weddings/:id', async (req, res) => {
 
   for (const field of allowedFields) {
     if (updates[field] !== undefined) {
-      wedding[field] = updates[field]
+      wedding[field] = field === 'weddingDate' ? normalizeWeddingDate(updates[field]) : updates[field]
     }
   }
 

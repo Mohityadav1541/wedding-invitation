@@ -299,3 +299,66 @@ export function extractTimeInputVal(timeStr) {
   }
   return ''
 }
+
+/**
+ * Robustly parses wedding dates in various formats into a valid Date object.
+ * Corrects malformed strings (e.g. "2026-10-16:00+05:30" missing "T18:30"),
+ * pure dates ("2026-10-16"), standard ISO strings, etc.
+ */
+export function parseWeddingTargetDate(dateStr) {
+  if (!dateStr) return null
+  if (dateStr instanceof Date && !isNaN(dateStr.getTime())) return dateStr
+
+  let raw = String(dateStr).trim()
+  if (!raw) return null
+
+  // Fix malformed pattern where ":00..." was appended directly to YYYY-MM-DD without time or "T"
+  // e.g. "2026-10-16:00+05:30" -> "2026-10-16T18:30:00+05:30"
+  if (/^\d{4}-\d{2}-\d{2}:/.test(raw)) {
+    raw = raw.replace(/^(\d{4}-\d{2}-\d{2}):/, '$1T18:30:')
+  }
+
+  // Attempt direct standard parse
+  let d = new Date(raw)
+  if (!isNaN(d.getTime())) return d
+
+  // If pure date format YYYY-MM-DD, set default auspicious wedding evening time (18:30 IST)
+  const dateMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (dateMatch) {
+    const ymd = dateMatch[1]
+    d = new Date(`${ymd}T18:30:00+05:30`)
+    if (!isNaN(d.getTime())) return d
+    d = new Date(`${ymd}T18:30:00`)
+    if (!isNaN(d.getTime())) return d
+    d = new Date(ymd)
+    if (!isNaN(d.getTime())) return d
+  }
+
+  return null
+}
+
+/**
+ * Calculates remaining countdown units (days, hours, minutes, seconds)
+ * relative to the current time or an optional reference timestamp.
+ * Returns null if target date is invalid or missing.
+ */
+export function formatCountdown(targetDate, nowMs = Date.now()) {
+  if (!targetDate) return null
+  const dateObj = parseWeddingTargetDate(targetDate)
+  if (!dateObj) return null
+
+  const diff = dateObj.getTime() - nowMs
+  if (isNaN(diff)) return null
+
+  if (diff <= 0) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true }
+  }
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+  return { days, hours, minutes, seconds, isPast: false }
+}
+

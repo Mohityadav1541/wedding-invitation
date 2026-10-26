@@ -838,7 +838,7 @@ export default function WeddingAdminPortal() {
                       const hindi = formatCalendarDateToHindi(val, true)
                       setSettingsDraft((s) => ({
                         ...s,
-                        weddingDate: val ? `${val}T18:00:00Z` : s.weddingDate,
+                        weddingDate: val ? `${val}T18:30:00+05:30` : s.weddingDate,
                         weddingDateLabel: hindi || s.weddingDateLabel,
                       }))
                     }}

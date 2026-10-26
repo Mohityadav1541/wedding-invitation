@@ -1,6 +1,7 @@
 import express from 'express'
 import { requireWeddingAdmin, recordAuditLog } from '../auth.js'
 import { getDb, saveDb } from '../db.js'
+import { normalizeWeddingDate } from './publicRoutes.js'
 
 const router = express.Router()
 
@@ -91,7 +92,7 @@ router.put('/settings', async (req, res) => {
 
   for (const field of allowedFields) {
     if (updates[field] !== undefined) {
-      wedding[field] = updates[field]
+      wedding[field] = field === 'weddingDate' ? normalizeWeddingDate(updates[field]) : updates[field]
     }
   }
 

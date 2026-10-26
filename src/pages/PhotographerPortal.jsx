@@ -169,7 +169,11 @@ export default function PhotographerPortal() {
       const res = await createWedding({
         brideName: newWeddingDraft.brideName,
         groomName: newWeddingDraft.groomName,
-        weddingDate: newWeddingDraft.weddingDate ? `${newWeddingDraft.weddingDate}:00+05:30` : '',
+        weddingDate: newWeddingDraft.weddingDate
+          ? (newWeddingDraft.weddingDate.includes('T')
+              ? newWeddingDraft.weddingDate
+              : `${newWeddingDraft.weddingDate}T18:30:00+05:30`)
+          : '',
         weddingDateLabel: newWeddingDraft.weddingDateLabel,
         weddingTimeLabel: newWeddingDraft.weddingTimeLabel,
         venue: {
