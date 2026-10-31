@@ -99,6 +99,13 @@ export default function PublicInvitation({ subView = 'home' }) {
   const [rsvpSuccess, setRsvpSuccess] = useState(null)
   const [rsvpError, setRsvpError] = useState('')
 
+  // Prevent browser auto-translate from altering sacred Hindi & Sanskrit texts
+  useEffect(() => {
+    document.documentElement.lang = 'hi'
+    document.documentElement.setAttribute('translate', 'no')
+    document.documentElement.classList.add('notranslate')
+  }, [])
+
   // Load public wedding by slug
   useEffect(() => {
     if (!weddingSlug) return
@@ -238,7 +245,7 @@ export default function PublicInvitation({ subView = 'home' }) {
   const showMediaSection = weddingGallery.length > 0 || weddingVideos.length > 0
 
   return (
-    <div className="site-shell">
+    <div className="site-shell notranslate" translate="no">
       {/* Background ambient music */}
       <audio ref={audioRef} src="/music/ambient-drone.wav" loop />
 
@@ -463,7 +470,7 @@ export default function PublicInvitation({ subView = 'home' }) {
 
               <div className="opening-thumb-action">
                 <a href="#ganesh-darshan" className="button button-gold mobile-thumb-btn">
-                  <Sparkles size={16} /> शाही मंदिर के कपाट खोलें (Enter Darshan)
+                  <Sparkles size={16} /> शाही मंदिर के कपाट खोलें
                 </a>
               </div>
             </div>
@@ -748,7 +755,7 @@ export default function PublicInvitation({ subView = 'home' }) {
               <Reveal className="venue-inner">
                 <p className="section-kicker">स्थान एवं दिशा-निर्देश</p>
                 <h2 id="venue-title" className="section-title">
-                  विवाह स्थल (Wedding Venue)
+                  विवाह स्थल
                 </h2>
                 <Ornament />
 
@@ -767,7 +774,7 @@ export default function PublicInvitation({ subView = 'home' }) {
                       rel="noopener noreferrer"
                       className="button button-gold venue-map-btn"
                     >
-                      <MapPin size={16} /> Google Maps में रास्ता देखें (Open Maps)
+                      <MapPin size={16} /> Google Maps में रास्ता देखें
                     </a>
                   )}
                 </div>

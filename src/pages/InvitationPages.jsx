@@ -11,7 +11,7 @@ function InvitationPageLayout({ eyebrow = 'शुभ विवाह', title, su
   const pages = useCustomPages().filter((page) => page.showInNav !== false)
   const names = `${wedding.brideName || 'दुल्हन का नाम'} एवं ${wedding.groomName || 'दूल्हे का नाम'}`
   return (
-    <div className="invite-page-shell">
+    <div className="invite-page-shell notranslate" translate="no">
       <div className="invite-page-ribbon">॥ श्री गणेशाय नमः ॥ <span>पधारो म्हारे देश</span> ॥ शुभ मंगलम् ॥</div>
       <header className="invite-page-header">
         <Link className="invite-page-brand" to="/"><span className="brand-mark"><span>श्री</span><i /></span><span><strong>शुभ विवाह</strong><small>{names}</small></span></Link>
