@@ -162,3 +162,14 @@ export async function submitRsvp(slug, payload) {
     body: JSON.stringify(payload),
   })
 }
+
+export async function resolveMapUrl(url) {
+  try {
+    return await request('/public/resolve-map', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    })
+  } catch {
+    return null
+  }
+}

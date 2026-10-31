@@ -4,6 +4,12 @@ import { fileURLToPath } from 'node:url'
 import pg from 'pg'
 import { hashPin, generateId } from './crypto.js'
 
+if (process.loadEnvFile) {
+  try {
+    process.loadEnvFile()
+  } catch (_) {}
+}
+
 const { Pool } = pg
 
 const __filename = fileURLToPath(import.meta.url)
@@ -18,8 +24,13 @@ if (!fs.existsSync(DATA_DIR)) {
 
 let cache = null
 let pgPool = null
+let neonActive = false
 let isPersisting = false
 let hasPendingPersist = false
+
+export function isNeonConnected() {
+  return neonActive
+}
 
 export function getPool() {
   if (pgPool) return pgPool
@@ -64,6 +75,7 @@ export async function initDb() {
       )
       if (res.rows.length > 0 && res.rows[0].data) {
         cache = res.rows[0].data
+        neonActive = true
         console.log('✅ [Neon PostgreSQL] Successfully connected & loaded data from Neon database.')
         try {
           fs.writeFileSync(DB_FILE, JSON.stringify(cache, null, 2), 'utf8')
@@ -80,9 +92,11 @@ export async function initDb() {
          ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = NOW();`,
         [JSON.stringify(cache)]
       )
+      neonActive = true
       console.log('✅ [Neon PostgreSQL] Initial data successfully stored in Neon database.')
       return cache
     } catch (err) {
+      neonActive = false
       console.error('⚠️ [Neon PostgreSQL Connection Warning]:', err.message)
       console.log('Falling back to local file storage (store.json)...')
     }
@@ -134,6 +148,7 @@ export function getDb() {
  * Critical for serverless environments (e.g. Vercel) where multiple lambdas run concurrently.
  */
 export async function ensureDbFresh() {
+  if (!neonActive) return loadDb()
   const pool = getPool()
   if (!pool) return loadDb()
 
@@ -167,15 +182,18 @@ export async function saveDb() {
     fs.renameSync(tempFile, DB_FILE)
   } catch (_) {}
 
-  // 2. Persist to Neon PostgreSQL and await completion
-  try {
-    await persistToNeon()
-  } catch (err) {
-    console.error('[Neon PostgreSQL Save Warning]:', err.message)
+  // 2. Persist to Neon PostgreSQL and await completion if connected
+  if (neonActive) {
+    try {
+      await persistToNeon()
+    } catch (err) {
+      console.error('[Neon PostgreSQL Save Warning]:', err.message)
+    }
   }
 }
 
 export async function persistToNeon() {
+  if (!neonActive) return
   const pool = getPool()
   if (!pool || !cache) return
 

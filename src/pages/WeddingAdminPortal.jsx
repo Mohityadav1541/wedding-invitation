@@ -35,6 +35,7 @@ import {
   fetchWeddingAdminDashboard,
   updateWeddingAdminSettings,
   getWeddingAdminExportUrl,
+  resolveMapUrl,
 } from '../lib/api.js'
 import { compressImageFile } from '../lib/weddingSettings.js'
 import { RajPortrait } from '../components/RajPortrait.jsx'
@@ -47,6 +48,7 @@ import {
 import {
   FAMOUS_ROYAL_PALACES,
   VENUE_REGIONS,
+  cleanGoogleMapsInput,
   extractPalaceAndCityFromMapUrl,
   getGoogleMapsDestinationUrl,
 } from '../lib/weddingVenueOptions.js'
@@ -989,12 +991,13 @@ export default function WeddingAdminPortal() {
                   value={settingsDraft.venue?.googleMapsQuery || ''}
                   onChange={(e) => {
                     const val = e.target.value
+                    const cleaned = cleanGoogleMapsInput(val) || val
                     const parsed = extractPalaceAndCityFromMapUrl(val)
                     setSettingsDraft((s) => ({
                       ...s,
                       venue: {
                         ...(s.venue || {}),
-                        googleMapsQuery: val,
+                        googleMapsQuery: cleaned,
                         ...(parsed.hasDetails
                           ? {
                               name: parsed.name || s.venue?.name || '',
@@ -1004,8 +1007,27 @@ export default function WeddingAdminPortal() {
                           : {}),
                       },
                     }))
-                    if (parsed.hasDetails && parsed.name && parsed.city) {
-                      setNotice(`मैप लिंक से "${parsed.name}, ${parsed.city}" स्वतः पहचान लिया गया!`)
+                    if (parsed.hasDetails && (parsed.name || parsed.city)) {
+                      const label = [parsed.name, parsed.city].filter(Boolean).join(', ')
+                      setNotice(`मैप लिंक से "${label}" स्वतः पहचान लिया गया!`)
+                    }
+                    if (cleaned && (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(cleaned) || (!parsed.name && !parsed.city))) {
+                      resolveMapUrl(cleaned).then((res) => {
+                        if (res?.success && (res.name || res.city)) {
+                          setSettingsDraft((s) => ({
+                            ...s,
+                            venue: {
+                              ...(s.venue || {}),
+                              googleMapsQuery: res.resolvedUrl || cleaned,
+                              name: res.name || s.venue?.name || '',
+                              city: res.city || s.venue?.city || '',
+                              address: res.address || s.venue?.address || '',
+                            },
+                          }))
+                          const resolvedLabel = [res.name, res.city].filter(Boolean).join(', ')
+                          setNotice(`Google Maps से "${resolvedLabel}" सत्यापित व अपडेट हो गया!`)
+                        }
+                      })
                     }
                   }}
                   placeholder="https://maps.app.goo.gl/... या Google Maps लिंक पेस्ट करें"

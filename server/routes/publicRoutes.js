@@ -2,6 +2,7 @@ import express from 'express'
 import { getDb, saveDb } from '../db.js'
 import { generateId } from '../crypto.js'
 import { getActiveSession } from '../auth.js'
+import { cleanGoogleMapsInput, extractPalaceAndCityFromMapUrl } from '../../src/lib/weddingVenueOptions.js'
 
 const router = express.Router()
 
@@ -158,6 +159,72 @@ router.post('/weddings/:slug/rsvp', async (req, res) => {
       ? 'आपका उत्तर एवं शुभकामनाएँ सफलतापूर्वक दर्ज कर ली गई हैं। हम आपके आगमन की प्रतीक्षा करेंगे!'
       : 'आपका संदेश सफलतापूर्वक दर्ज कर लिया गया है। धन्यवाद!',
     id: rsvpId,
+  })
+})
+
+/**
+ * POST /api/public/resolve-map
+ * Resolves short links, iframes, and mobile share texts to direct Google Maps URLs,
+ * and extracts palace name, city, and address.
+ */
+router.post('/resolve-map', async (req, res) => {
+  const { url = '' } = req.body || {}
+  const cleaned = cleanGoogleMapsInput(url)
+  if (!cleaned) {
+    return res.status(400).json({ error: 'मान्य Google Maps लिंक प्रदान करें।' })
+  }
+
+  let finalUrl = cleaned
+  let pageTitle = ''
+
+  // If short URL (maps.app.goo.gl, goo.gl/maps), expand via redirect
+  if (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(cleaned)) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 4000)
+      const fetchRes = await fetch(cleaned, {
+        method: 'GET',
+        redirect: 'follow',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'hi,en;q=0.9',
+        },
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+      finalUrl = fetchRes.url || cleaned
+      const html = await fetchRes.text().catch(() => '')
+      const titleMatch = html.match(/<title>([^<]+)<\/title>/i)
+      if (titleMatch && titleMatch[1]) {
+        pageTitle = titleMatch[1].replace(/\s*[-–—]\s*Google Maps/i, '').trim()
+      }
+    } catch {
+      // If network unreachable or timeout, fallback to local parsing
+    }
+  }
+
+  const parsed = extractPalaceAndCityFromMapUrl(finalUrl)
+
+  // If page title is present and parsed lacks name
+  if (!parsed.name && pageTitle && !pageTitle.toLowerCase().includes('google maps')) {
+    const titleParts = pageTitle.split(',').map((s) => s.trim()).filter(Boolean)
+    parsed.name = titleParts[0] || ''
+    if (titleParts.length > 1 && !parsed.city) {
+      parsed.city = titleParts.slice(1).join(', ')
+    }
+    parsed.hasDetails = Boolean(parsed.name || parsed.city)
+  }
+
+  res.json({
+    success: true,
+    cleanUrl: cleaned,
+    resolvedUrl: finalUrl,
+    name: parsed.name || '',
+    city: parsed.city || '',
+    address: parsed.address || '',
+    hasDetails: parsed.hasDetails || false,
+    isShortUrl: parsed.isShortUrl || false,
   })
 })
 

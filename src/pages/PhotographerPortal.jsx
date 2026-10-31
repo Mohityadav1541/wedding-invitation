@@ -39,6 +39,7 @@ import {
   togglePublishWedding,
   resetWeddingAdminPin,
   deleteWedding,
+  resolveMapUrl,
 } from '../lib/api.js'
 import { compressImageFile } from '../lib/weddingSettings.js'
 import { RajPortrait } from '../components/RajPortrait.jsx'
@@ -53,6 +54,7 @@ import {
 import {
   FAMOUS_ROYAL_PALACES,
   VENUE_REGIONS,
+  cleanGoogleMapsInput,
   extractPalaceAndCityFromMapUrl,
   getGoogleMapsDestinationUrl,
 } from '../lib/weddingVenueOptions.js'
@@ -528,10 +530,11 @@ export default function PhotographerPortal() {
   }
 
   const handleMapUrlForDraft = (val) => {
+    const cleaned = cleanGoogleMapsInput(val) || val
     const parsed = extractPalaceAndCityFromMapUrl(val)
     setNewWeddingDraft((v) => ({
       ...v,
-      googleMapsQuery: val,
+      googleMapsQuery: cleaned,
       ...(parsed.hasDetails
         ? {
             venueName: parsed.name || v.venueName,
@@ -540,8 +543,27 @@ export default function PhotographerPortal() {
           }
         : {}),
     }))
-    if (parsed.hasDetails && parsed.name && parsed.city) {
-      showNotice(`मैप लिंक से "${parsed.name}, ${parsed.city}" स्वतः भर दिया गया!`)
+
+    if (parsed.hasDetails && (parsed.name || parsed.city)) {
+      const label = [parsed.name, parsed.city].filter(Boolean).join(', ')
+      showNotice(`मैप लिंक से "${label}" स्वतः भर दिया गया!`)
+    }
+
+    // If short URL or lacks full details, resolve asynchronously via server
+    if (cleaned && (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(cleaned) || (!parsed.name && !parsed.city))) {
+      resolveMapUrl(cleaned).then((res) => {
+        if (res?.success && (res.name || res.city)) {
+          setNewWeddingDraft((v) => ({
+            ...v,
+            googleMapsQuery: res.resolvedUrl || cleaned,
+            venueName: res.name || v.venueName,
+            venueCity: res.city || v.venueCity,
+            venueAddress: res.address || v.venueAddress,
+          }))
+          const resolvedLabel = [res.name, res.city].filter(Boolean).join(', ')
+          showNotice(`Google Maps से "${resolvedLabel}" सत्यापित व भर दिया गया!`)
+        }
+      })
     }
   }
 
@@ -562,12 +584,13 @@ export default function PhotographerPortal() {
   }
 
   const handleMapUrlForEditing = (val) => {
+    const cleaned = cleanGoogleMapsInput(val) || val
     const parsed = extractPalaceAndCityFromMapUrl(val)
     setEditingWedding((w) => ({
       ...w,
       venue: {
         ...(w.venue || {}),
-        googleMapsQuery: val,
+        googleMapsQuery: cleaned,
         ...(parsed.hasDetails
           ? {
               name: parsed.name || w.venue?.name || '',
@@ -577,8 +600,30 @@ export default function PhotographerPortal() {
           : {}),
       },
     }))
-    if (parsed.hasDetails && parsed.name && parsed.city) {
-      showNotice(`मैप लिंक से "${parsed.name}, ${parsed.city}" स्वतः पहचान लिया गया!`)
+
+    if (parsed.hasDetails && (parsed.name || parsed.city)) {
+      const label = [parsed.name, parsed.city].filter(Boolean).join(', ')
+      showNotice(`मैप लिंक से "${label}" स्वतः पहचान लिया गया!`)
+    }
+
+    // If short URL or lacks full details, resolve asynchronously via server
+    if (cleaned && (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(cleaned) || (!parsed.name && !parsed.city))) {
+      resolveMapUrl(cleaned).then((res) => {
+        if (res?.success && (res.name || res.city)) {
+          setEditingWedding((w) => ({
+            ...w,
+            venue: {
+              ...(w.venue || {}),
+              googleMapsQuery: res.resolvedUrl || cleaned,
+              name: res.name || w.venue?.name || '',
+              city: res.city || w.venue?.city || '',
+              address: res.address || w.venue?.address || '',
+            },
+          }))
+          const resolvedLabel = [res.name, res.city].filter(Boolean).join(', ')
+          showNotice(`Google Maps से "${resolvedLabel}" सत्यापित व अपडेट हो गया!`)
+        }
+      })
     }
   }
 

@@ -189,9 +189,44 @@ export const FAMOUS_ROYAL_PALACES = [
 export const VENUE_REGIONS = Array.from(new Set(FAMOUS_ROYAL_PALACES.map((p) => p.region)))
 
 /**
+ * Cleans and normalizes any user input for Google Maps.
+ * Handles:
+ * - Direct URLs (https://maps.app.goo.gl/..., https://www.google.com/maps/...)
+ * - URLs without protocol (maps.app.goo.gl/..., goo.gl/maps/..., google.com/maps/...)
+ * - Embed <iframe> codes (<iframe src="https://www.google.com/maps/embed?..." ...></iframe>)
+ * - Mobile / WhatsApp share texts ("Check out Rambagh Palace on Google Maps: https://maps.app.goo.gl/...")
+ */
+export function cleanGoogleMapsInput(input) {
+  if (!input || typeof input !== 'string') return ''
+  let text = input.trim()
+
+  // 1. Extract src if user pasted an entire iframe tag
+  const iframeMatch = text.match(/<iframe[^>]+src=["']([^"']+)["']/i)
+  if (iframeMatch && iframeMatch[1]) {
+    text = iframeMatch[1].trim()
+  }
+
+  // 2. Extract URL if mixed with conversational share text
+  const urlMatch = text.match(
+    /(https?:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps|(?:www\.)?google\.[a-z.]+\/maps)[^\s"'<>]*|maps\.app\.goo\.gl\/[^\s"'<>]+|goo\.gl\/maps\/[^\s"'<>]+|(?:www\.)?google\.[a-z.]+\/maps[^\s"'<>]*|https?:\/\/[^\s"'<>]+)/i
+  )
+  if (urlMatch && urlMatch[1]) {
+    text = urlMatch[1].trim()
+  }
+
+  // 3. Ensure protocol
+  if (/^(?:maps\.app\.goo\.gl|goo\.gl\/maps|(?:www\.)?google\.[a-z.]+\/maps)/i.test(text)) {
+    text = `https://${text}`
+  }
+
+  return text
+}
+
+/**
  * Generates a bulletproof Google Maps direct destination URL
  * Supports:
  * - Direct HTTP/HTTPS maps URLs (e.g., https://maps.app.goo.gl/..., https://www.google.com/maps/...)
+ * - Cleaned short URLs and embed links
  * - Search query fallback using Google Maps Universal Search API
  * - Automatic venue name + address + city synthesis
  */
@@ -200,10 +235,13 @@ export function getGoogleMapsDestinationUrl(venue) {
 
   const rawQuery = (venue.googleMapsQuery || '').trim()
   if (rawQuery) {
-    if (/^https?:\/\//i.test(rawQuery)) {
-      return rawQuery
+    const cleaned = cleanGoogleMapsInput(rawQuery)
+    if (/^https?:\/\//i.test(cleaned)) {
+      return cleaned
     }
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawQuery)}`
+    if (cleaned) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleaned)}`
+    }
   }
 
   const combined = [venue.name, venue.address, venue.city].filter(Boolean).join(', ')
@@ -221,41 +259,77 @@ export function getGoogleMapsDestinationUrl(venue) {
  * - google.com/maps/search/Name,+City...
  * - maps.google.com/?q=Name,+City...
  * - maps.app.goo.gl / goo.gl short links
+ * - Embed iframes
+ * - Mobile share messages ("Check out Venue on Google Maps: https://...")
  */
 export function extractPalaceAndCityFromMapUrl(input) {
   if (!input || typeof input !== 'string') {
     return { name: '', city: '', address: '', rawUrl: '', hasDetails: false, isShortUrl: false }
   }
 
-  const rawUrl = input.trim()
-  const isShortUrl = /maps\.app\.goo\.gl|goo\.gl\/maps/i.test(rawUrl)
+  const rawInput = input.trim()
+  const cleanedUrl = cleanGoogleMapsInput(rawInput)
+  const isShortUrl = /maps\.app\.goo\.gl|goo\.gl\/maps/i.test(cleanedUrl)
 
-  // First check if it matches any of our predefined famous palaces
-  const matchedPreset = FAMOUS_ROYAL_PALACES.find(
-    (p) =>
-      rawUrl.toLowerCase().includes(p.id) ||
-      (rawUrl.toLowerCase().includes(p.name.toLowerCase().split(' ')[0]) &&
-        rawUrl.toLowerCase().includes(p.city.toLowerCase().split(' ')[0]))
-  )
+  // Extract candidate pre-link text if input contained share text
+  let candidateTitle = ''
+  if (rawInput !== cleanedUrl) {
+    const preText = rawInput
+      .replace(cleanedUrl, '')
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+      .replace(/check out /i, '')
+      .replace(/on google maps/i, '')
+      .replace(/[:\-–—]+$/, '')
+      .trim()
+    if (preText && preText.length >= 3 && preText.length <= 100) {
+      candidateTitle = preText
+    }
+  }
+
+  // 1. Check if input matches any of our predefined famous royal palaces
+  const matchedPreset = FAMOUS_ROYAL_PALACES.find((p) => {
+    const rawLower = rawInput.toLowerCase()
+    const cleanLower = cleanedUrl.toLowerCase()
+    if (rawLower.includes(p.id) || cleanLower.includes(p.id)) return true
+    const pQuerySlug = p.googleMapsQuery.toLowerCase()
+    if (rawLower.includes(pQuerySlug) || cleanLower.includes(pQuerySlug)) return true
+    const englishName = p.name.match(/\(([^)]+)\)/)?.[1]?.toLowerCase()
+    const hindiName = p.name.split('(')[0]?.trim().toLowerCase()
+    if (englishName && (rawLower.includes(englishName) || cleanLower.includes(englishName))) return true
+    if (hindiName && (rawLower.includes(hindiName) || cleanLower.includes(hindiName))) return true
+    return false
+  })
+
   if (matchedPreset) {
     return {
       name: matchedPreset.name,
       city: matchedPreset.city,
       address: matchedPreset.address,
-      rawUrl: matchedPreset.googleMapsQuery,
+      rawUrl: cleanedUrl || matchedPreset.googleMapsQuery,
       hasDetails: true,
-      isShortUrl: false,
+      isShortUrl,
     }
   }
 
-  // For short URLs, we preserve rawUrl without wiping user fields
-  if (isShortUrl) {
+  // For short URLs without pre-text, preserve rawUrl without wiping existing user fields
+  if (isShortUrl && !candidateTitle) {
     return {
       name: '',
       city: '',
       address: '',
-      rawUrl,
+      rawUrl: cleanedUrl,
       hasDetails: false,
+      isShortUrl: true,
+    }
+  }
+
+  if (isShortUrl && candidateTitle) {
+    return {
+      name: candidateTitle,
+      city: '',
+      address: '',
+      rawUrl: cleanedUrl,
+      hasDetails: true,
       isShortUrl: true,
     }
   }
@@ -264,44 +338,59 @@ export function extractPalaceAndCityFromMapUrl(input) {
 
   try {
     // 1. Check for URL path /place/Venue+Name,+City/
-    const placeMatch = rawUrl.match(/\/maps\/place\/([^/@?#]+)/i)
+    const placeMatch = cleanedUrl.match(/\/maps\/place\/([^/@?#]+)/i)
     if (placeMatch && placeMatch[1]) {
       extractedQuery = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '))
     }
 
     // 2. Check for URL path /maps/search/Venue+Name...
     if (!extractedQuery) {
-      const searchMatch = rawUrl.match(/\/maps\/search\/([^/@?#]+)/i)
+      const searchMatch = cleanedUrl.match(/\/maps\/search\/([^/@?#]+)/i)
       if (searchMatch && searchMatch[1]) {
         extractedQuery = decodeURIComponent(searchMatch[1].replace(/\+/g, ' '))
       }
     }
 
     // 3. Check for query parameter q= or query=
-    if (!extractedQuery && rawUrl.includes('?')) {
-      const urlObj = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`)
+    if (!extractedQuery && cleanedUrl.includes('?')) {
+      const urlObj = new URL(cleanedUrl.startsWith('http') ? cleanedUrl : `https://${cleanedUrl}`)
       const q = urlObj.searchParams.get('q') || urlObj.searchParams.get('query')
       if (q) {
         extractedQuery = decodeURIComponent(q.replace(/\+/g, ' '))
       }
     }
+
+    // 4. Check for embed !2s parameter (e.g. !2sRambagh+Palace)
+    if (!extractedQuery && cleanedUrl.includes('!2s')) {
+      const embedMatch = cleanedUrl.match(/!2s([^!]+)/)
+      if (embedMatch && embedMatch[1]) {
+        extractedQuery = decodeURIComponent(embedMatch[1].replace(/\+/g, ' '))
+      }
+    }
   } catch {
     // If not a standard URL, treat raw text as query
-    if (!rawUrl.startsWith('http')) {
-      extractedQuery = rawUrl
+    if (!cleanedUrl.startsWith('http')) {
+      extractedQuery = cleanedUrl
     }
   }
 
   // If input was a simple text query or name (e.g. "City Palace, Udaipur")
-  if (!extractedQuery && !rawUrl.startsWith('http')) {
-    extractedQuery = rawUrl
+  if (!extractedQuery && !cleanedUrl.startsWith('http')) {
+    extractedQuery = cleanedUrl
+  }
+
+  if (!extractedQuery && candidateTitle) {
+    extractedQuery = candidateTitle
   }
 
   if (!extractedQuery) {
-    return { name: '', city: '', address: '', rawUrl, hasDetails: false, isShortUrl }
+    return { name: '', city: '', address: '', rawUrl: cleanedUrl, hasDetails: false, isShortUrl }
   }
 
-  // Split query parts by comma or dash
+  // Clean trailing coordinates or metadata
+  extractedQuery = extractedQuery.replace(/\s*@[-+]?\d+.*$/, '').trim()
+
+  // Split query parts by comma
   const parts = extractedQuery
     .split(',')
     .map((s) => s.trim())
@@ -309,30 +398,32 @@ export function extractPalaceAndCityFromMapUrl(input) {
 
   let name = ''
   let city = ''
-  let address = extractedQuery
+  let address = ''
 
   if (parts.length >= 2) {
     name = parts[0]
-    // Filter out pin codes and generic words from city
     const candidateCity = parts[1]
     const statePart = parts[2] ? `, ${parts[2]}` : ''
     city = `${candidateCity}${statePart}`.replace(/\b\d{6}\b/g, '').trim()
+    address = extractedQuery
   } else if (parts.length === 1) {
     name = parts[0]
+    address = ''
   }
 
   // Clean up unwanted parameters or coords (e.g., "24.5764, 73.6835")
   if (/^[-+]?\d+(\.\d+)?\s*,\s*[-+]?\d+(\.\d+)?$/.test(extractedQuery.trim())) {
     name = 'विवाह स्थल (Geo Coordinates)'
     city = ''
+    address = extractedQuery
   }
 
   return {
-    name: name || '',
+    name: name || candidateTitle || '',
     city: city || '',
-    address: address !== rawUrl ? address : '',
-    rawUrl,
-    hasDetails: Boolean(name || city),
+    address: address !== cleanedUrl ? address : '',
+    rawUrl: cleanedUrl,
+    hasDetails: Boolean(name || city || candidateTitle),
     isShortUrl,
   }
 }

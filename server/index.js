@@ -4,11 +4,17 @@ import cookieParser from 'cookie-parser'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+if (process.loadEnvFile) {
+  try {
+    process.loadEnvFile()
+  } catch (_) {}
+}
+
 import authRoutes from './routes/authRoutes.js'
 import photographerRoutes from './routes/photographerRoutes.js'
 import weddingAdminRoutes from './routes/weddingAdminRoutes.js'
 import publicRoutes from './routes/publicRoutes.js'
-import { getDb, initDb, ensureDbFresh } from './db.js'
+import { getDb, initDb, ensureDbFresh, isNeonConnected } from './db.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -52,10 +58,12 @@ app.use('/api/public', publicRoutes)
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const neon = isNeonConnected()
   res.json({
     status: 'ok',
     system: 'Royal Rajasthani Multi-Wedding Platform',
-    database: process.env.DATABASE_URL ? 'neon-postgresql' : 'local-json',
+    database: neon ? 'neon-postgresql (connected)' : (process.env.DATABASE_URL ? 'local-json (neon fallback)' : 'local-json'),
+    neonConnected: neon,
     timestamp: new Date().toISOString(),
   })
 })

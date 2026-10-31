@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUpRight, CalendarDays, Clock3, Heart, MapPin, Share2, S
 import { useWeddingData, useCustomPages } from '../lib/weddingSettings.js'
 import GaneshMantraPlayer from '../components/GaneshMantraPlayer.jsx'
 import { RajPortrait } from '../components/RajPortrait.jsx'
+import { getGoogleMapsDestinationUrl } from '../lib/weddingVenueOptions.js'
 
 function InvitationPageLayout({ eyebrow = 'शुभ विवाह', title, subtitle, children }) {
   const wedding = useWeddingData()
@@ -82,10 +83,10 @@ function StoryPage() {
 
 function VenuePage() {
   const wedding = useWeddingData()
-  const venue = wedding.venue
-  const query = venue.googleMapsQuery || venue.address || venue.name
+  const venue = wedding.venue || {}
+  const destUrl = getGoogleMapsDestinationUrl(venue)
   return <InvitationPageLayout eyebrow="मिलन का शुभ स्थल" title={venue.name || 'विवाह स्थल'} subtitle="आपके स्नेह और आशीर्वाद से ही यह उत्सव पूर्ण होगा।">
-    <div className="route-venue-card"><div className="route-venue-icon"><MapPin size={34} /></div><h2>{venue.name || 'विवाह स्थल का नाम'}</h2><p>{venue.address || 'पूरा पता शीघ्र साझा किया जाएगा'}</p><p>{venue.city}</p><div className="route-venue-date"><CalendarDays size={18} />{wedding.weddingDateLabel || 'शुभ तिथि शीघ्र घोषित होगी'} <span>·</span> {wedding.weddingTimeLabel || 'शुभ मुहूर्त'}</div>{query && <a className="button button-maroon" href={/^https?:\/\//i.test(query) ? query : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`} target="_blank" rel="noreferrer">Google Maps में दिशा देखें <MapPin size={16} /></a>}</div>
+    <div className="route-venue-card"><div className="route-venue-icon"><MapPin size={34} /></div><h2>{venue.name || 'विवाह स्थल का नाम'}</h2><p>{venue.address || 'पूरा पता शीघ्र साझा किया जाएगा'}</p><p>{venue.city}</p><div className="route-venue-date"><CalendarDays size={18} />{wedding.weddingDateLabel || 'शुभ तिथि शीघ्र घोषित होगी'} <span>·</span> {wedding.weddingTimeLabel || 'शुभ मुहूर्त'}</div>{destUrl && <a className="button button-maroon" href={destUrl} target="_blank" rel="noreferrer">Google Maps में दिशा देखें <MapPin size={16} /></a>}</div>
   </InvitationPageLayout>
 }
 
