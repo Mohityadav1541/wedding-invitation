@@ -2363,6 +2363,21 @@ html, body {
   object-fit: cover;
   z-index: 2;
 }
+iframe.mobile-video-element {
+  border: 0;
+  background: #000;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+.mobile-video-card.is-embed-active .mobile-video-play-btn,
+.mobile-video-card.is-embed-active .mobile-video-bottom-bar,
+.mobile-video-card.is-embed-active .mobile-video-poster,
+.mobile-video-card.is-embed-active .mobile-video-gradient {
+  display: none !important;
+}
 .mobile-video-gradient {
   position: absolute;
   inset: 0;

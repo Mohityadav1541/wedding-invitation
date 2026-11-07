@@ -52,6 +52,7 @@ import {
   extractPalaceAndCityFromMapUrl,
   getGoogleMapsDestinationUrl,
 } from '../lib/weddingVenueOptions.js'
+import { parseVideoUrl, cleanVideoInput } from '../lib/weddingVideoOptions.js'
 
 export default function WeddingAdminPortal() {
   const [loading, setLoading] = useState(true)
@@ -1288,20 +1289,87 @@ export default function WeddingAdminPortal() {
                         </select>
                       </label>
 
-                      <label className="admin-field">
-                        वीडियो URL (MP4 / WebM / वीडियो लिंक)
-                        <input
-                          value={curVideo.videoUrl || ''}
-                          onChange={(e) => {
-                            const videoUrl = e.target.value
-                            setSettingsDraft((s) => ({
-                              ...s,
-                              videos: [{ ...(s.videos?.[0] || {}), id: 'primary-video', videoUrl }],
-                            }))
-                          }}
-                          placeholder="https://example.com/wedding-reel.mp4"
-                        />
-                      </label>
+                      {(() => {
+                        const parsedVideo = parseVideoUrl(curVideo.videoUrl || '')
+                        return (
+                          <>
+                            <label className="admin-field">
+                              वीडियो URL (YouTube, Google Drive, Vimeo या MP4 लिंक)
+                              <div className="map-link-input-group">
+                                <input
+                                  value={curVideo.videoUrl || ''}
+                                  onChange={(e) => {
+                                    const rawVal = e.target.value
+                                    const cleaned = cleanVideoInput(rawVal) || rawVal
+                                    const parsed = parseVideoUrl(cleaned)
+                                    setSettingsDraft((s) => ({
+                                      ...s,
+                                      videos: [
+                                        {
+                                          ...(s.videos?.[0] || {}),
+                                          id: 'primary-video',
+                                          videoUrl: cleaned,
+                                          ...(parsed.isShorts ? { aspect: '9:16' } : {}),
+                                          ...(!s.videos?.[0]?.poster && parsed.defaultPoster
+                                            ? { poster: parsed.defaultPoster }
+                                            : {}),
+                                        },
+                                      ],
+                                    }))
+                                    if (parsed.isValid && parsed.platformLabel) {
+                                      setNotice(`✅ ${parsed.platformLabel} लिंक पहचाना गया!`)
+                                    }
+                                  }}
+                                  placeholder="https://youtu.be/... या Google Drive / MP4 लिंक पेस्ट करें"
+                                />
+                                {parsedVideo.isValid && (
+                                  <a
+                                    href={parsedVideo.cleanUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="map-action-btn"
+                                    title="वीडियो नए टैब में खोलकर जांचें"
+                                  >
+                                    <ExternalLink size={13} /> वीडियो जांचें
+                                  </a>
+                                )}
+                              </div>
+                              <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                                {parsedVideo.isValid ? (
+                                  <span style={{ fontSize: 11, color: '#2e7d32', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    ✓ {parsedVideo.platformLabel} लिंक मान्य है
+                                  </span>
+                                ) : (
+                                  <small style={{ color: '#8a5c38', fontSize: 11 }}>
+                                    💡 YouTube (वीडियो या Shorts), Google Drive शेयर लिंक, Vimeo या MP4 लिंक पेस्ट करें।
+                                  </small>
+                                )}
+                                {parsedVideo.type === 'googledrive' && (
+                                  <small style={{ color: '#b26a00', fontSize: 11, display: 'block', width: '100%' }}>
+                                    ⚠️ Google Drive टिप: फ़ाइल में 'Anyone with the link can view' (कोई भी देख सकता है) चालू होना आवश्यक है।
+                                  </small>
+                                )}
+                                {parsedVideo.defaultPoster && !curVideo.poster && (
+                                  <button
+                                    type="button"
+                                    className="admin-button admin-button-quiet"
+                                    style={{ fontSize: 11, padding: '2px 8px', height: 'auto' }}
+                                    onClick={() => {
+                                      setSettingsDraft((s) => ({
+                                        ...s,
+                                        videos: [{ ...(s.videos?.[0] || {}), poster: parsedVideo.defaultPoster }],
+                                      }))
+                                      setNotice('YouTube थंबनेल को कवर फ़ोटो के रूप में सेट कर दिया गया।')
+                                    }}
+                                  >
+                                    📸 YouTube थंबनेल का उपयोग करें
+                                  </button>
+                                )}
+                              </div>
+                            </label>
+                          </>
+                        )
+                      })()}
 
                       <div style={{ marginTop: 10 }}>
                         <label className="admin-field" style={{ marginBottom: 4 }}>
